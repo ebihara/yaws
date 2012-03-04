@@ -1446,6 +1446,11 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
     case toks(Lno, Chars) of
         [] ->
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, Auth);
+        ["type", '=', "Basic"] ->
+            fload(FD, server_auth, GC, C, Cs, Lno+1, Next, Auth);
+        ["type", '=', "Digest"] ->
+            A2 = Auth#auth{type = "Digest"},
+            fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ["docroot", '=', Docroot] ->
             A2 = Auth#auth{docroot = filename:absname(Docroot)},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
