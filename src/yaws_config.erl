@@ -208,7 +208,8 @@ ensure_auth_headers(Authdirs) ->
 add_auth_headers(Auth = #auth{headers = []}) ->
     %% Headers needs to be set
     Realm   = Auth#auth.realm,
-    Headers = yaws:make_www_authenticate_header({realm, Realm}),
+    Type    = Auth#auth.type,
+    Headers = yaws:make_www_authenticate_header({realm, Realm}, {type, Type}),
     Auth#auth{headers = Headers};
 add_auth_headers(Auth) ->
     Auth.
@@ -1544,12 +1545,13 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
             Pam = Auth#auth.pam,
             Users = Auth#auth.users,
             Realm = Auth#auth.realm,
+            Type  = Auth#auth.type,
             A2 =  case {Pam, Users} of
                       {false, []} ->
                           Auth;
                       _ ->
                           H = Auth#auth.headers ++
-                              yaws:make_www_authenticate_header({realm, Realm}),
+                              yaws:make_www_authenticate_header({realm, Realm}, {type, Type}),
                           Auth#auth{headers = H}
                   end,
             Authdirs = case A2#auth.dir of

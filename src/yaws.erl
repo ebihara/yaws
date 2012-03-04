@@ -72,6 +72,7 @@
          make_connection_close_header/1,
          make_transfer_encoding_chunked_header/1,
          make_www_authenticate_header/1,
+         make_www_authenticate_header/2,
          make_etag/1,
          make_content_type_header/1,
          make_date_header/0]).
@@ -1499,6 +1500,9 @@ make_www_authenticate_header({realm, Realm}) ->
 
 make_www_authenticate_header(Method) ->
     ["WWW-Authenticate: ", Method, ["\r\n"]].
+
+make_www_authenticate_header({realm, Realm}, {type, Type}) ->
+    ["WWW-Authenticate: ", Type, " realm=\"", Realm, ["\"\r\n"]].
 
 make_date_header() ->
     N = element(2, now()),
