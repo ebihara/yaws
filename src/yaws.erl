@@ -1502,7 +1502,19 @@ make_www_authenticate_header(Method) ->
     ["WWW-Authenticate: ", Method, ["\r\n"]].
 
 make_www_authenticate_header({realm, Realm}, {type, Type}) ->
-    ["WWW-Authenticate: ", Type, " realm=\"", Realm, ["\"\r\n"]].
+    case Type of
+        "Basic" ->
+            make_www_authenticate_header({realm, Realm});
+        "Digest" ->
+            make_www_authenticate_header([Type, " realm=\"", Realm, "\",", "nonce=\"", generate_digest_nonce(), "\""]);
+        _ ->
+            undefined
+    end.
+
+generate_digest_nonce() ->
+    random:seed(now()),
+    Int = random:uniform(16#7fffffff),
+    integer_to_list(Int).
 
 make_date_header() ->
     N = element(2, now()),
