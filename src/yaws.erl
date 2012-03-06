@@ -73,6 +73,7 @@
          make_transfer_encoding_chunked_header/1,
          make_www_authenticate_header/1,
          make_www_authenticate_header/2,
+         generate_digest_nonce/0,
          make_etag/1,
          make_content_type_header/1,
          make_date_header/0]).
@@ -1506,7 +1507,7 @@ make_www_authenticate_header({realm, Realm}, {type, Type}) ->
         "Basic" ->
             make_www_authenticate_header({realm, Realm});
         "Digest" ->
-            make_www_authenticate_header([Type, " realm=\"", Realm, "\",", "nonce=\"", generate_digest_nonce(), "\""]);
+            {digest, {realm, Realm}};
         _ ->
             undefined
     end.
@@ -1514,7 +1515,8 @@ make_www_authenticate_header({realm, Realm}, {type, Type}) ->
 generate_digest_nonce() ->
     random:seed(now()),
     Int = random:uniform(16#7fffffff),
-    integer_to_list(Int).
+    Bin = erlang:md5(integer_to_list(Int)),
+    string_to_hex(binary_to_list(Bin)).
 
 make_date_header() ->
     N = element(2, now()),

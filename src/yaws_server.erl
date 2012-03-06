@@ -1843,7 +1843,14 @@ is_auth(ARG, Req_dir, H, [Auth_methods|T], {_Ret, Auth_headers}) ->
 		%% If we auth using an authmod we need to return User
 		%% so that we can set it in ARG.
         {false, A} ->
-            L = A#auth.headers,
+            if
+                is_tuple(A#auth.headers), element(1, A#auth.headers) == digest ->
+                    {digest, {realm, Realm}} = A#auth.headers,
+                    L = yaws:make_www_authenticate_header(["Digest realm=\"", Realm, "\",", "nonce=\"", yaws:generate_digest_nonce(), "\""]);
+                true ->
+                    L = A#auth.headers
+            end,
+
             Auth_methods1 = Auth_methods#auth{realm = A#auth.realm,
                                               outmod = A#auth.outmod},
             is_auth(ARG, Req_dir, H, T,
