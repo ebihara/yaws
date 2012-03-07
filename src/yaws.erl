@@ -1513,10 +1513,16 @@ make_www_authenticate_header({realm, Realm}, {type, Type}) ->
     end.
 
 generate_digest_nonce() ->
-    random:seed(now()),
-    Int = random:uniform(16#7fffffff),
-    Bin = erlang:md5(integer_to_list(Int)),
-    string_to_hex(binary_to_list(Bin)).
+    try crypto:strong_rand_bytes(16) of
+        Bin ->
+            string_to_hex(binary_to_list(Bin))
+    catch
+        low_entropy ->
+            random:seed(now()),
+            Int = random:uniform(16#7fffffff),
+            Bin = erlang:md5(integer_to_list(Int)),
+            string_to_hex(binary_to_list(Bin))
+    end.
 
 make_date_header() ->
     N = element(2, now()),
