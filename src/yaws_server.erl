@@ -1846,7 +1846,11 @@ is_auth(ARG, Req_dir, H, [Auth_methods|T], {_Ret, Auth_headers}) ->
             if
                 is_tuple(A#auth.headers), element(1, A#auth.headers) == digest ->
                     {digest, {realm, Realm}} = A#auth.headers,
-                    L = yaws:make_www_authenticate_header(["Digest realm=\"", Realm, "\",", "nonce=\"", yaws:generate_digest_nonce(), "\""]);
+                    Nonce = yaws:generate_digest_nonce(),
+                    TTL = 3600,
+                    Now = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
+                    yaws_session_server:insert({ysession, Nonce, Now + TTL, TTL, calendar:local_time(), undefined, {}}),
+                    L = yaws:make_www_authenticate_header(["Digest realm=\"", Realm, "\",", "nonce=\"", Nonce, "\""]);
                 true ->
                     L = A#auth.headers
             end,
