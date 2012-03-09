@@ -1997,11 +1997,17 @@ handle_auth(ARG, {User, Password, OrigString},
 handle_auth(ARG, {Digest, undefined, OrigString},
             Auth_methods = #auth{users = Users}, Ret) when is_record(Digest, digest), Users /= [] ->
 
-    case detect_digest_user(ARG, Users, Digest) of
-        {yes, User} ->
-            maybe_auth_log({ok, User}, ARG),
-            true;
-        {no, _} ->
+    case yaws_session_server:lookup(Digest#digest.nonce) of
+        [_Y] ->
+            case detect_digest_user(ARG, Users, Digest) of
+                {yes, User} ->
+                    maybe_auth_log({ok, User}, ARG),
+                    true;
+                {no, _} ->
+                    handle_auth(ARG, {Digest, undefined, OrigString},
+                                   Auth_methods#auth{users = []}, Ret)
+            end;
+        [] ->
             handle_auth(ARG, {Digest, undefined, OrigString},
                            Auth_methods#auth{users = []}, Ret)
     end;
