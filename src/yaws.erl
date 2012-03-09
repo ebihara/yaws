@@ -2145,6 +2145,8 @@ parse_auth(Orig = "Basic " ++ Auth64) ->
                     {undefined, undefined, Orig}
             end
     end;
+parse_auth(Orig = "Digest " ++ Digest) ->
+    {yaws_api:parse_digest(Digest), undefined, Orig};
 parse_auth(Orig = "Negotiate " ++ _Auth64) ->
     {undefined, undefined, Orig};
 parse_auth(Orig) ->

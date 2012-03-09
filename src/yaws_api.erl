@@ -66,6 +66,8 @@
 -export([parse_set_cookie/1, format_set_cookie/1,
          postvar/2, queryvar/2, getvar/2]).
 
+-export([parse_digest/1]).
+
 -export([binding/1,binding_exists/1,
          dir_listing/1, dir_listing/2, redirect_self/1]).
 
@@ -1885,6 +1887,60 @@ skip_space([]) -> [];
 skip_space([$ |T]) -> skip_space(T);
 skip_space([$\t|T]) -> skip_space(T);
 skip_space(T) -> T.
+
+%%
+
+parse_digest(Str) ->
+    parse_digest(Str, #digest{}).
+
+parse_digest([], Digest) ->
+    Digest;
+parse_digest(Str, Digest) ->
+    Rest00 = skip_space(Str),
+    {Key,Rest0} = parse_digest_key(Rest00, []),
+    Rest1 = skip_space(Rest0),
+    case Rest1 of
+        [$=|Rest2] ->
+            {Value, _Quoted, Rest3} = parse_digest_value(Rest2),
+            NewDigest = set_digest_field(Digest, yaws:to_lower(Key), Value),
+            parse_digest(Rest3, NewDigest);
+        [$,|Rest2] ->
+            parse_digest(Rest2, Digest);
+        _ ->
+            Digest
+    end.
+
+set_digest_field(D, "username", Value) ->
+    D#digest{username=Value};
+set_digest_field(D, "realm", Value) ->
+    D#digest{realm=Value};
+set_digest_field(D, "nonce", Value) ->
+    D#digest{nonce=Value};
+set_digest_field(D, "uri", Value) ->
+    D#digest{uri=Value};
+set_digest_field(D, "response", Value) ->
+    D#digest{response=Value}.
+
+parse_digest_key([], Acc) ->
+    {lists:reverse(Acc), []};
+parse_digest_key(T=[$=|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_digest_key(T=[$,|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_digest_key([C|T], Acc) ->
+    parse_digest_key(T, [C|Acc]).
+
+parse_digest_value([$"|T]) ->
+    parse_quoted(T,[]);
+parse_digest_value(T) ->
+    parse_digest_value(T,[]).
+
+parse_digest_value([],Acc) ->
+    {lists:reverse(Acc), false, []};
+parse_digest_value(T=[$,|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_digest_value([C|T], Acc) ->
+    parse_digest_value(T, [C|Acc]).
 
 %%
 

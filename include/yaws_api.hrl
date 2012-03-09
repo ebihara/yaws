@@ -102,6 +102,12 @@
             secure,
             version}).
 
+-record(digest, {
+            username,
+            realm,
+            nonce,
+            uri,
+            response}).
 
 -record(redir_self, {
           host,        %% string() - our own host

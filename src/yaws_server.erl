@@ -1990,6 +1990,18 @@ handle_auth(ARG, {User, Password, OrigString},
                         Auth_methods#auth{pam = false}, Ret)
     end;
 
+handle_auth(ARG, {Digest, undefined, OrigString},
+            Auth_methods = #auth{users = Users}, Ret) when is_record(Digest, digest), Users /= [] ->
+
+    case detect_digest_user(ARG, Users, Digest) of
+        {yes, User} ->
+            maybe_auth_log({ok, User}, ARG),
+            true;
+        {no, _} ->
+            handle_auth(ARG, {Digest, undefined, OrigString},
+                           Auth_methods#auth{users = []}, Ret)
+    end;
+
 handle_auth(ARG, {User, Password, OrigString},
             Auth_methods = #auth{users = Users}, Ret) when Users /= [] ->
     case member({User, Password}, Users) of
@@ -2001,6 +2013,38 @@ handle_auth(ARG, {User, Password, OrigString},
                         Auth_methods#auth{users = []}, Ret)
     end.
 
+detect_digest_user(ARG, Users, Digest) when Users /= [] ->
+    [User|UsersRest] = Users,
+    detect_digest_user(ARG, User, UsersRest, Digest);
+
+detect_digest_user(_ARG, [], _Digest) ->
+    {no, undefined}.
+
+detect_digest_user(ARG, User, Users, Digest) ->
+    {UserName, Pass} = User,
+    case Digest#digest.username of
+        UserName ->
+            Req = ARG#arg.req,
+
+            A1 = [UserName, ":", Digest#digest.realm, ":", Pass],
+            A2 = [atom_to_list(Req#http_request.method), ":", Digest#digest.uri],
+            HA1Bin = erlang:md5(A1),
+            HA1 = yaws:string_to_hex(binary_to_list(HA1Bin)),
+            HA2Bin = erlang:md5(A2),
+            HA2 = yaws:string_to_hex(binary_to_list(HA2Bin)),
+
+            KDBin = erlang:md5([HA1, ":", Digest#digest.nonce, ":", HA2]),
+            KD = yaws:string_to_hex(binary_to_list(KDBin)),
+
+            case Digest#digest.response of
+                KD ->
+                    {yes, UserName};
+                _ ->
+                    detect_digest_user(ARG, Users, Digest)
+            end;
+        _ ->
+            detect_digest_user(ARG, Users, Digest)
+    end.
 
 is_revproxy(ARG, Path, SC = #sconf{revproxy = RevConf}) ->
     IsFwd = ?sc_forward_proxy(SC),
