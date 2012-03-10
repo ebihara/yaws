@@ -107,7 +107,9 @@
             realm,
             nonce,
             uri,
-            response}).
+            response,
+            cnonce,
+            nc}).
 
 -record(redir_self, {
           host,        %% string() - our own host

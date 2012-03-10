@@ -1919,7 +1919,13 @@ set_digest_field(D, "nonce", Value) ->
 set_digest_field(D, "uri", Value) ->
     D#digest{uri=Value};
 set_digest_field(D, "response", Value) ->
-    D#digest{response=Value}.
+    D#digest{response=Value};
+set_digest_field(D, "cnonce", Value) ->
+    D#digest{cnonce=Value};
+set_digest_field(D, "nc", Value) ->
+    D#digest{nc=Value};
+set_digest_field(D, _, _) ->
+    D#digest{}.
 
 parse_digest_key([], Acc) ->
     {lists:reverse(Acc), []};

@@ -1850,7 +1850,7 @@ is_auth(ARG, Req_dir, H, [Auth_methods|T], {_Ret, Auth_headers}) ->
                     TTL = 3600,
                     Now = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
                     yaws_session_server:insert({ysession, Nonce, Now + TTL, TTL, calendar:local_time(), undefined, {}}),
-                    L = yaws:make_www_authenticate_header(["Digest realm=\"", Realm, "\",", "nonce=\"", Nonce, "\""]);
+                    L = yaws:make_www_authenticate_header(["Digest realm=\"", Realm, "\",", "nonce=\"", Nonce, "\", qop=\"auth\""]);
                 true ->
                     L = A#auth.headers
             end,
@@ -2043,7 +2043,7 @@ detect_digest_user(ARG, User, Users, Digest) ->
             HA2Bin = erlang:md5(A2),
             HA2 = yaws:string_to_hex(binary_to_list(HA2Bin)),
 
-            KDBin = erlang:md5([HA1, ":", Digest#digest.nonce, ":", HA2]),
+            KDBin = erlang:md5([HA1, ":", Digest#digest.nonce, ":", Digest#digest.nc, ":", Digest#digest.cnonce, ":", "auth", ":", HA2]),
             KD = yaws:string_to_hex(binary_to_list(KDBin)),
 
             case Digest#digest.response of
