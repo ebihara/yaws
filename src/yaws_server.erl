@@ -1849,7 +1849,7 @@ is_auth(ARG, Req_dir, H, [Auth_methods|T], {_Ret, Auth_headers}) ->
                     Nonce = yaws:generate_digest_nonce(),
                     TTL = 3600,
                     Now = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
-                    yaws_session_server:insert({ysession, Nonce, Now + TTL, TTL, calendar:local_time(), undefined, {}}),
+                    yaws_session_server:insert({ysession, Nonce, Now + TTL, TTL, calendar:local_time(), undefined, {{nc, 0}}}),
                     L = yaws:make_www_authenticate_header(["Digest realm=\"", Realm, "\",", "nonce=\"", Nonce, "\", qop=\"auth\""]);
                 true ->
                     L = A#auth.headers
@@ -1999,17 +1999,23 @@ handle_auth(ARG, {Digest, undefined, OrigString},
 
     case yaws_session_server:lookup(Digest#digest.nonce) of
         [_Y] ->
-            case detect_digest_user(ARG, Users, Digest) of
-                {yes, User} ->
-                    maybe_auth_log({ok, User}, ARG),
-                    true;
-                {no, _} ->
-                    handle_auth(ARG, {Digest, undefined, OrigString},
-                                   Auth_methods#auth{users = []}, Ret)
+            {ok, {{nc, ServerNonceCount}}} = yaws_session_server:cookieval_to_opaque(Digest#digest.nonce),
+            ClientNonceCount = yaws:hex_to_integer(Digest#digest.nc),
+            case ServerNonceCount < ClientNonceCount of
+                true ->
+                    case detect_digest_user(ARG, Users, Digest) of
+                        {yes, User} ->
+                            yaws_session_server:replace_session(Digest#digest.nonce, {{nc, ClientNonceCount}}),
+                            maybe_auth_log({ok, User}, ARG),
+                            true;
+                        {no, _} ->
+                            handle_auth(ARG, {Digest, undefined, OrigString}, Auth_methods#auth{users = []}, Ret)
+                    end;
+                false ->
+                    handle_auth(ARG, {Digest, undefined, OrigString}, Auth_methods#auth{users = []}, Ret)
             end;
         [] ->
-            handle_auth(ARG, {Digest, undefined, OrigString},
-                           Auth_methods#auth{users = []}, Ret)
+            handle_auth(ARG, {Digest, undefined, OrigString}, Auth_methods#auth{users = []}, Ret)
     end;
 
 handle_auth(ARG, {User, Password, OrigString},
